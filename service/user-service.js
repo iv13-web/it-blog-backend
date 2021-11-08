@@ -8,19 +8,20 @@ const HttpError = require('../errors/http-error')
 
 class UserService {
 
-	async createAccount(email, password) {
-		const candidate = await UserModel.findOne({email})
+	async createAccount(email, password, username) {
+		const candidate = await UserModel.findOne({$or:[{email}, {username}]})
 		if (candidate) {
-			throw HttpError.BadRequest(`User with provided email: ${email} already exists`)
+			if (username === candidate.username) {
+				throw HttpError.BadRequest(`User with provided username: ${username} already exists`)
+			}
+			if (email === candidate.email) {
+				throw HttpError.BadRequest(`User with provided email: ${email} already exists`)
+			}
 		}
-		const hashPassword = await bcrypt.hash(password, 5)
+		const hashPassword = await bcrypt.hash(password, 3)
 		const activationLink = uuid.v4()
-		const user = await UserModel.create({
-			email,
-			password: hashPassword,
-			activationLink: `${process.env.API_URL}/activate/${activationLink}`
-		})
-		await mailService.sendActivationMail(email, activationLink)
+		const user = await UserModel.create({email, username, password: hashPassword, activationLink})
+		await mailService.sendActivationMail(email, `${process.env.API_URL}/activate/${activationLink}`)
 		const userDto = new UserDto(user) // filtering through dto not to send password into generateToken -> jwt.sign hash fn
 		const tokens = tokenService.generateToken({...userDto}) // sending plain object, not instance of UserDto
 		await tokenService.saveToken(userDto.id, tokens.refreshToken)
@@ -34,6 +35,11 @@ class UserService {
 		}
 		user.isActivated = true
 		await user.save()
+	}
+
+	async checkUsername(username) {
+		const exist = await UserModel.findOne({username})
+		return exist
 	}
 
 	async login(email, password) {

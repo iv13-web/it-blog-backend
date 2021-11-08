@@ -10,8 +10,8 @@ class UserController {
 			if (!errors.isEmpty()) {
 				return next(HttpError.BadRequest('Validation failed. Please check email and password', errors))
 			}
-			const {email, password} = req.body
-			const userData = await userService.createAccount(email, password)
+			const {email, password, username} = req.body
+			const userData = await userService.createAccount(email, password, username)
 			res.cookie('refreshToken', userData.refreshToken, {maxAge: daysToMs(30), httpOnly: true})
 			return res.json(userData)
 		} catch (err) {
@@ -69,7 +69,16 @@ class UserController {
 		try {
 			const users = await userService.getAllUsers()
 			return res.json(users)
+		} catch (err) {
+			next(err)
+		}
+	}
 
+	async checkUsername(req, res, next) {
+		try {
+			const {username} = req.body
+			const exist = await userService.checkUsername(username)
+			return res.json({available: !exist})
 		} catch (err) {
 			next(err)
 		}

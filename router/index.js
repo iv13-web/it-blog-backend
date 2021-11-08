@@ -6,11 +6,12 @@ const authMiddleware = require('../middlewares/auth-middleware')
 
 router.post('/signup',
 	body('email').isEmail(),
-	body('password').isLength({min: 6, max: 20}),
+	body('password').isLength({min: 6, max: 16}),
 	userController.signup
 )
 router.post('/login', userController.login)
 router.post('/logout', userController.logout) // removing refreshToken
+router.post('/check-username', userController.checkUsername) // removing refreshToken
 router.get('/activate/:link', userController.activateAccount)
 router.get('/refresh', userController.refreshToken) // refreshing access token
 
